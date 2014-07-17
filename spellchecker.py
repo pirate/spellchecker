@@ -17,11 +17,16 @@ def words(text):
     return re.findall('[a-z]+', text.lower()) 
 
 def train(text, model=None):
-    """generate word model (dictionary of word:frequency)"""
+    """generate or update a word model (dictionary of word:frequency)"""
     if model is None:
-        model = collections.defaultdict(lambda: 0)
-    for word in text:
+        model = collections.defaultdict(lambda: 0.0)
+    for word in words(text):
         model[word] += 1
+    return model
+
+def train_files(file_list, model=None):
+    for f in file_list:
+        model = train(file(f).read(), model)
     return model
 
 def variants(word):
@@ -31,12 +36,7 @@ def variants(word):
     transposes = [a + b[1] + b[0] + b[2:] for a, b in splits if len(b)>1]
     replaces   = [a + c + b[1:] for a, b in splits for c in alphabet if b]
     inserts    = [a + c + b     for a, b in splits for c in alphabet]
-    log("Deletes: ", len(set(deletes)))
-    log("Transposes: ", len(set(transposes)))
-    log("Replaces: ", len(set(replaces)))
-    log("Inserts: ", len(set(inserts)))
     s = set(deletes + transposes + replaces + inserts)
-    log("Total Variations Tried: ", len(s))
     return s
 
 def double_variants(word):
@@ -52,9 +52,10 @@ def numberofdupes(string, idx):
         idx += 1 # 3
     return idx-initial_idx # 3-2 = 1
 
-def get_reductions(word):
+def reductions(word):
     """return flat option list of all possible variations of the word by removing duplicate letters"""
     word = list(word)
+    # ['h','i', 'i', 'i'] becomes ['h', ['i', 'ii', 'iii']]
     for idx, l in enumerate(word):
         n = numberofdupes(word, idx)
         # if letter appears more than once in a row
@@ -66,12 +67,15 @@ def get_reductions(word):
                 word.pop(idx+1)
             # replace original letter with flat list
             word[idx] = flat_dupes
-    # ['h','i', 'i', 'i'] becomes ['h', ['i', 'ii', 'iii']]
-    return word
+    
+    # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
+    for p in product(*word):
+        yield ''.join(p)
 
-def get_vowelswaps(word):
+def vowelswaps(word):
     """return flat option list of all possible variations of the word by swapping vowels"""
     word = list(word)
+    # ['h','i'] becomes ['h', ['a', 'e', 'i', 'o', 'u', 'y']]
     for idx, l in enumerate(word):
         if type(l) == list:
             # dont mess with the reductions
@@ -79,111 +83,94 @@ def get_vowelswaps(word):
         elif l in vowels:
             # if l is a vowel, replace with all possible vowels
             word[idx] = list(vowels)
-        
-    # ['h','i'] becomes ['h', ['a', 'e', 'i', 'o', 'u', 'y']]
-    return word
-
-def flatten(options):
-    """convert compact nested options list into full list"""
+    
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
-    a = set()
-    for p in product(*options):
-        a.add(''.join(p))
-    return a
+    for p in product(*word):
+        yield ''.join(p)
 
-def norvig_suggestions(word, real_words, short_circuit=True):
-    if short_circuit:
-        return (  {word.lower()} & real_words or
-                        variants(word) & real_words or
-                        double_variants(word) & real_words or
-                        set(["NO SUGGESTION"]))
-    else:
-        return ({word.lower()} | variants(word) | double_variants(word)) & real_words or set(["NO SUGGESTION"])  
+def both(word):
+    for reduction in reductions(word):
+        for variant in vowelswaps(reduction):
+            yield variant
 
 def suggestions(word, real_words, short_circuit=True):
     """get best spelling suggestion for word
     return on first match if short_circuit is true, otherwise collect all possible suggestions
     """
-
-    # Case (upper/lower) errors:
-    #  "inSIDE" => "inside"
-    if word != word.lower():
-        if word.lower() in real_words:
-            return {[word.lower()]}
-        word = word.lower()
-
-    # Repeated letters:
-    #  "jjoobbb" => "job"
-    reductions = flatten(get_reductions(word))
-    log("Reductions: ", len(reductions))
-    valid_reductions = real_words & reductions
-    if valid_reductions and short_circuit:
-        return valid_reductions
-
-    # Incorrect vowels:
-    #  "weke" => "wake"
-    vowelswaps = flatten(get_vowelswaps(word))
-    log("Vowelswaps: ", len(vowelswaps))
-    valid_vowelswaps = real_words & vowelswaps
-    if valid_vowelswaps and short_circuit:
-        return valid_vowelswaps
-
-    # combinations
-    # "CUNsperrICY" => "conspiracy"
-    both = set()
-    for reduction in reductions:
-        both = both | flatten(get_vowelswaps(reduction))
-    log("Both: ", len(both))
-    valid_both = real_words & both
-    if valid_both and short_circuit:
-        return valid_both
-
-    log("Total Variations Tried: ", len(both)+len(vowelswaps)+len(reductions))
-
+    word = word.lower()
     if short_circuit:
-        return set(["NO SUGGESTION"])
+        return (        {word}                      & real_words or   #  caps     "inSIDE" => "inside"
+                        set(reductions(word))       & real_words or   #  repeats  "jjoobbb" => "job"
+                        set(vowelswaps(word))       & real_words or   #  vowels   "weke" => "wake"
+                        set(both(word))             & real_words or   #  both     "CUNsperrICY" => "conspiracy"
+                        set(variants(word))         & real_words or   #  other    "nonster" => "monster"
+                        set(double_variants(word))  & real_words or   #  other    "nmnster" => "manster"
+                        {"NO SUGGESTION"})
+    else:
+        return (        {word}                      & real_words or                                                          
+                        (set(reductions(word))  | set(vowelswaps(word)) | set(both(word)) | set(variants(word)) | set(double_variants(word))) & real_words or
+                        {"NO SUGGESTION"})
 
-    return (valid_vowelswaps | valid_reductions | valid_both) or set(["NO SUGGESTION"])
+def hamming_distance(word1, word2):
+    if word1 == word2:
+        return 0
+    dist = sum(imap(str.__ne__, word1[:len(word2)], word2[:len(word1)]))
+    dist = max([word2, word1]) if not dist else dist+abs(len(word2)-len(word1))
+    return dist
+
+def frequency(word, word_model):
+    if word in word_model:
+        return word_model.get(word)
+    else:
+        return 0
 
 def best_suggestion(inputted_word, suggestions, word_model=None):
-    """choose the best suggestion in a list based on lowest hamming distance from original word"""
+    """choose the best suggestion in a list based on lowest hamming distance from original word, or based on frequency if word_model is provided"""
 
-    if word_model is None:
-        scores = {}
-        # give each suggestion a score based on hamming distance
-        for suggestion in suggestions:
-            score = sum(imap(str.__ne__, suggestion, inputted_word[:len(suggestion)]))
-            if score in scores:
-                scores[score] += [suggestion]
-            else:
-                scores[score] = [suggestion]
+    suggestions = list(suggestions)
 
-        log("Scores: ", scores)
-        # pick the list of suggestions with the lowest hamming distance
-        # return the one that comes first in the alphabet (solves weke-> wake vs wyke)
-        return min(scores[min(scores.keys())])
-    else:
-        log("Scores:", { s:word_model.get(s) for s in suggestions})
-        return max(suggestions, key=word_model.get)
+    def comparehamm(one, two):
+        score1 = hamming_distance(inputted_word, one)
+        score2 = hamming_distance(inputted_word, two)
+        # lower is better
+        return cmp(score2, score1)
+
+    def comparefreq(one, two):
+        score1 = frequency(one, word_model)
+        score2 = frequency(two, word_model)
+        # higher is better
+        return cmp(score1, score2)
+
+    hamming_sorted = sorted(suggestions, comparehamm)[-10:]
+    freq_sorted = sorted(hamming_sorted, comparefreq)[-10:]
+    return str(freq_sorted[-1])
 
 if __name__ == "__main__":
-    word_file = file('/usr/share/dict/words')
-    word_model = train(words(word_file.read()))
+
+    word_model = train(file('/usr/share/dict/words').read())
     real_words = set(word_model)
 
-    log("Total Word Set: ", len(real_words))
+    texts = [   '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/words-english.txt',
+                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-4.txt',
+                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-3.txt',
+                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-2.txt',
+                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common.txt',
+                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/websters-dictionary.txt',
+                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/allwords.txt',
+                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/british.txt',]
+
+    word_model = train_files(texts, word_model)
+    
+    log("Total Word Set: ", len(word_model))
+    log("Model Precision: %s" % (sum(word_model.values())/len(word_model)))
 
     try:
         while True:
             word = str(raw_input(">"))
 
             possibilities = suggestions(word, real_words, short_circuit=False)
-            n_possibilities = norvig_suggestions(word, real_words, short_circuit=True)
 
-            print "Hamm Best: " + best_suggestion(word, possibilities)
-            print "Freq Best: " + best_suggestion(word, possibilities, word_model)
-            print "Norvig's Hamm Best: " + best_suggestion(word, n_possibilities)
-            print "Norvig's Freq Best: " + best_suggestion(word, n_possibilities, word_model)
+            print best_suggestion(word, possibilities, word_model)
 
     except (EOFError, KeyboardInterrupt):
         exit(0)
