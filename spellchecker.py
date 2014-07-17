@@ -1,12 +1,19 @@
 # Nick Sweeting 2014
-# python spellchecker for disqus
+# python spellchecker
 
 from itertools import product, imap
+import re
 
-word_file = open('/usr/share/dict/words', 'r')
-word_list = { x.strip() for x in word_file.readlines() }
-
+VERBOSE = True
 vowels = set("aeiouy")
+
+def log(*args):
+    if VERBOSE:
+        print ''.join([ str(x) for x in args])
+
+def words(text):
+    """filter body of text for words"""
+    return re.findall('[a-z]+', text.lower()) 
 
 def numberofdupes(string, idx):
     """return the number of times in a row the letter at index idx is duplicated"""
@@ -56,32 +63,31 @@ def flatten(options):
         a.add(''.join(p))
     return a
 
-def suggestions(word, short_circuit=True):
+def suggestions(word, real_words, short_circuit=True):
     """get best spelling suggestion for word
     return on first match if short_circuit is true, otherwise collect all possible suggestions
     """
 
     # Case (upper/lower) errors:
     #  "inSIDE" => "inside"
-
     if word != word.lower():
-        if word.lower() in word_list:
+        if word.lower() in real_words:
             return set([word.lower()])
         word = word.lower()
 
     # Repeated letters:
     #  "jjoobbb" => "job"
     reductions = flatten(get_reductions(word))
-    print "Reductions: ", len(reductions)
-    valid_reductions = word_list & reductions
+    log("Reductions: ", len(reductions))
+    valid_reductions = real_words & reductions
     if valid_reductions and short_circuit:
         return valid_reductions
 
     # Incorrect vowels:
     #  "weke" => "wake"
     vowelswaps = flatten(get_vowelswaps(word))
-    print "Vowelswaps: ",len(vowelswaps)
-    valid_vowelswaps = word_list & vowelswaps
+    log("Vowelswaps: ", len(vowelswaps))
+    valid_vowelswaps = real_words & vowelswaps
     if valid_vowelswaps and short_circuit:
         return valid_vowelswaps
 
@@ -90,21 +96,22 @@ def suggestions(word, short_circuit=True):
     both = set()
     for reduction in reductions:
         both = both | flatten(get_vowelswaps(reduction))
-    print "Both: ", len(both)
-    valid_both = word_list & both
+    log("Both: ", len(both))
+    valid_both = real_words & both
     if valid_both and short_circuit:
         return valid_both
+
+    log("Total Variations Tried: ", len(both)+len(vowelswaps)+len(reductions))
 
     if short_circuit:
         return set(["NO SUGGESTION"])
 
     return (valid_vowelswaps | valid_reductions | valid_both) or set(["NO SUGGESTION"])
 
-def best_suggestion(suggestions, inputted_word):
+def best_suggestion(inputted_word, suggestions):
     """choose the best suggestion in a list based on lowest hamming distance from original word"""
 
     scores = {}
-
     # give each suggestion a score based on hamming distance
     for suggestion in suggestions:
         score = sum(imap(str.__ne__, suggestion, inputted_word[:len(suggestion)]))
@@ -113,16 +120,25 @@ def best_suggestion(suggestions, inputted_word):
         else:
             scores[score] = [suggestion]
 
+    log("Scores: ", scores)
+
     # pick the list of suggestions with the lowest hamming distance
     # return the one that comes first in the alphabet (solves weke-> wake vs wyke)
-    print "Scores:", scores
     return min(scores[min(scores.keys())])
 
 if __name__ == "__main__":
+    word_file = open('/usr/share/dict/words', 'r')
+    real_words = set(words(word_file.read()))
+
+    log("Total Word Set: ", len(real_words))
+
     try:
         while True:
             word = str(raw_input(">"))
-            possibilities = suggestions(word, short_circuit=False)
-            print(best_suggestion(possibilities, word))
-    except EOFError:
+
+            possibilities = suggestions(word, real_words, short_circuit=not VERBOSE)
+
+            print(best_suggestion(word, possibilities))
+
+    except (EOFError, KeyboardInterrupt):
         exit(0)
