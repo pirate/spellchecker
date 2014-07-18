@@ -8,6 +8,8 @@ VERBOSE = True
 vowels = set("aeiouy")
 alphabet = set('abcdefghijklmnopqrstuvwxyz')
 
+### IO
+
 def log(*args):
     if VERBOSE:
         print ''.join([ str(x) for x in args])
@@ -29,6 +31,32 @@ def train_files(file_list, model=None):
         model = train(file(f).read(), model)
     return model
 
+### UTILITY FUNCTIONS
+
+def numberofdupes(string, idx):
+    """return the number of times in a row the letter at index idx is duplicated"""
+    # "abccdefgh", 2  returns 1
+    initial_idx = idx # 2
+    last = string[idx] # c
+    while idx+1 < len(string) and string[idx+1] == last:
+        idx += 1 # 3
+    return idx-initial_idx # 3-2 = 1
+
+def hamming_distance(word1, word2):
+    if word1 == word2:
+        return 0
+    dist = sum(imap(str.__ne__, word1[:len(word2)], word2[:len(word1)]))
+    dist = max([word2, word1]) if not dist else dist+abs(len(word2)-len(word1))
+    return dist
+
+def frequency(word, word_model):
+    if word in word_model:
+        return word_model.get(word)
+    else:
+        return 0
+
+### POSSIBILITIES ANALYSIS
+
 def variants(word):
     """get all possible variants for a word"""
     splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
@@ -42,15 +70,6 @@ def variants(word):
 def double_variants(word):
     """get variants for the variants for a word"""
     return set(s for w in variants(word) for s in variants(w))
-
-def numberofdupes(string, idx):
-    """return the number of times in a row the letter at index idx is duplicated"""
-    # "abccdefgh", 2  returns 1
-    initial_idx = idx # 2
-    last = string[idx] # c
-    while idx+1 < len(string) and string[idx+1] == last:
-        idx += 1 # 3
-    return idx-initial_idx # 3-2 = 1
 
 def reductions(word):
     """return flat option list of all possible variations of the word by removing duplicate letters"""
@@ -93,6 +112,8 @@ def both(word):
         for variant in vowelswaps(reduction):
             yield variant
 
+### POSSIBILITY CHOOSING
+
 def suggestions(word, real_words, short_circuit=True):
     """get best spelling suggestion for word
     return on first match if short_circuit is true, otherwise collect all possible suggestions
@@ -110,19 +131,6 @@ def suggestions(word, real_words, short_circuit=True):
         return (        {word}                      & real_words or                                                          
                         (set(reductions(word))  | set(vowelswaps(word)) | set(both(word)) | set(variants(word)) | set(double_variants(word))) & real_words or
                         {"NO SUGGESTION"})
-
-def hamming_distance(word1, word2):
-    if word1 == word2:
-        return 0
-    dist = sum(imap(str.__ne__, word1[:len(word2)], word2[:len(word1)]))
-    dist = max([word2, word1]) if not dist else dist+abs(len(word2)-len(word1))
-    return dist
-
-def frequency(word, word_model):
-    if word in word_model:
-        return word_model.get(word)
-    else:
-        return 0
 
 def best_suggestion(inputted_word, suggestions, word_model=None):
     """choose the best suggestion in a list based on lowest hamming distance from original word, or based on frequency if word_model is provided"""
@@ -148,16 +156,17 @@ def best_suggestion(inputted_word, suggestions, word_model=None):
 if __name__ == "__main__":
 
     word_model = train(file('/usr/share/dict/words').read())
+    #word_model = train(file('sherlockholmes.txt').read())
+
     real_words = set(word_model)
 
     texts = [   '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/words-english.txt',
-                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-4.txt',
-                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-3.txt',
-                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common-2.txt',
-                #'/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common.txt',
+                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common.txt',
                 '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/websters-dictionary.txt',
                 '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/allwords.txt',
                 '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/british.txt',]
+
+    texts = [ 'sherlockholmes.txt' ]
 
     word_model = train_files(texts, word_model)
     
@@ -169,7 +178,7 @@ if __name__ == "__main__":
             word = str(raw_input(">"))
 
             possibilities = suggestions(word, real_words, short_circuit=False)
-
+            print possibilities
             print best_suggestion(word, possibilities, word_model)
 
     except (EOFError, KeyboardInterrupt):
