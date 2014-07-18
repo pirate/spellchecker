@@ -166,7 +166,7 @@ if __name__ == "__main__":
                 '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/allwords.txt',
                 '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/british.txt',]
 
-    texts = [ 'sherlockholmes.txt' ]
+    #texts = [ 'sherlockholmes.txt' ]
 
     word_model = train_files(texts, word_model)
     
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         while True:
             word = str(raw_input(">"))
 
-            possibilities = suggestions(word, real_words, short_circuit=False)
+            possibilities = suggestions(word, real_words, short_circuit=True)
             print possibilities
             print best_suggestion(word, possibilities, word_model)
 
