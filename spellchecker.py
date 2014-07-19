@@ -120,13 +120,9 @@ def suggestions(word, real_words, short_circuit=True):
     """
     word = word.lower()
     if short_circuit:
-        return (        {word}                      & real_words or   #  caps     "inSIDE" => "inside"
-                        set(reductions(word))       & real_words or   #  repeats  "jjoobbb" => "job"
-                        set(vowelswaps(word))       & real_words or   #  vowels   "weke" => "wake"
-                        set(both(word))             & real_words or   #  both     "CUNsperrICY" => "conspiracy"
-                        set(variants(word))         & real_words or   #  other    "nonster" => "monster"
-                        set(double_variants(word))  & real_words or   #  other    "nmnster" => "manster"
-                        {"NO SUGGESTION"})
+        return          {word} & real_words or set(reductions(word)) & real_words or set(both(word)) & real_words or {"NO SUGGESTION"}
+        #                 set(variants(word))         & real_words or \
+        #                 set(double_variants(word))  & real_words or \               
     else:
         return (        {word}                      & real_words or                                                          
                         (set(reductions(word))  | set(vowelswaps(word)) | set(both(word)) | set(variants(word)) | set(double_variants(word))) & real_words or
@@ -178,7 +174,6 @@ if __name__ == "__main__":
             word = str(raw_input(">"))
 
             possibilities = suggestions(word, real_words, short_circuit=True)
-            print possibilities
             print best_suggestion(word, possibilities, word_model)
 
     except (EOFError, KeyboardInterrupt):
