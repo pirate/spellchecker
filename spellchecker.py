@@ -4,7 +4,7 @@
 import re, collections
 from itertools import product, imap
 
-VERBOSE = True
+VERBOSE = False
 vowels = set("aeiouy")
 alphabet = set('abcdefghijklmnopqrstuvwxyz')
 
@@ -156,15 +156,15 @@ if __name__ == "__main__":
 
     real_words = set(word_model)
 
-    texts = [   '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/words-english.txt',
-                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common.txt',
-                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/websters-dictionary.txt',
-                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/allwords.txt',
-                '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/british.txt',]
+    # texts = [   '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/words-english.txt',
+    #             '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/common.txt',
+    #             '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/websters-dictionary.txt',
+    #             '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/allwords.txt',
+    #             '/Volumes/HD/Coding/Black Hat/Hash Cracking/Dictionaries/british.txt',]
 
     #texts = [ 'sherlockholmes.txt' ]
 
-    word_model = train_files(texts, word_model)
+    #word_model = train_files(texts, word_model)
     
     log("Total Word Set: ", len(word_model))
     log("Model Precision: %s" % (sum(word_model.values())/len(word_model)))
