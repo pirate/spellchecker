@@ -1,7 +1,8 @@
 # Nick Sweeting 2014
 # python spellchecker
 
-import re, collections
+import re
+import collections
 from itertools import product, imap
 
 # do not edit! added by PythonBreakpoints
@@ -12,15 +13,18 @@ VERBOSE = True
 vowels = set("aeiouy")
 alphabet = set('abcdefghijklmnopqrstuvwxyz')
 
-### IO
+# IO
+
 
 def log(*args):
     if VERBOSE:
-        print ''.join([ str(x) for x in args])
+        print ''.join([str(x) for x in args])
+
 
 def words(text):
     """filter body of text for words"""
-    return re.findall('[a-z]+', text.lower()) 
+    return re.findall('[a-z]+', text.lower())
+
 
 def train(text, model=None):
     """generate or update a word model (dictionary of word:frequency)"""
@@ -30,28 +34,33 @@ def train(text, model=None):
         model[word] += 1
     return model
 
+
 def train_from_files(file_list, model=None):
     for f in file_list:
         model = train(file(f).read(), model)
     return model
 
-### UTILITY FUNCTIONS
+# UTILITY FUNCTIONS
+
 
 def numberofdupes(string, idx):
     """return the number of times in a row the letter at index idx is duplicated"""
     # "abccdefgh", 2  returns 1
-    initial_idx = idx # 2
-    last = string[idx] # c
-    while idx+1 < len(string) and string[idx+1] == last:
-        idx += 1 # 3
-    return idx-initial_idx # 3-2 = 1
+    initial_idx = idx  # 2
+    last = string[idx]  # c
+    while idx + 1 < len(string) and string[idx + 1] == last:
+        idx += 1  # 3
+    return idx - initial_idx  # 3-2 = 1
+
 
 def hamming_distance(word1, word2):
     if word1 == word2:
         return 0
     dist = sum(imap(str.__ne__, word1[:len(word2)], word2[:len(word1)]))
-    dist = max([word2, word1]) if not dist else dist+abs(len(word2)-len(word1))
+    dist = max([word2, word1]) if not dist else dist + \
+        abs(len(word2) - len(word1))
     return dist
+
 
 def frequency(word, word_model):
     if word in word_model:
@@ -59,21 +68,24 @@ def frequency(word, word_model):
     else:
         return 0
 
-### POSSIBILITIES ANALYSIS
+# POSSIBILITIES ANALYSIS
+
 
 def variants(word):
     """get all possible variants for a word"""
-    splits     = [(word[:i], word[i:]) for i in range(len(word) + 1)]
-    deletes    = [a + b[1:] for a, b in splits if b]
-    transposes = [a + b[1] + b[0] + b[2:] for a, b in splits if len(b)>1]
-    replaces   = [a + c + b[1:] for a, b in splits for c in alphabet if b]
-    inserts    = [a + c + b     for a, b in splits for c in alphabet]
+    splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+    deletes = [a + b[1:] for a, b in splits if b]
+    transposes = [a + b[1] + b[0] + b[2:] for a, b in splits if len(b) > 1]
+    replaces = [a + c + b[1:] for a, b in splits for c in alphabet if b]
+    inserts = [a + c + b for a, b in splits for c in alphabet]
     s = set(deletes + transposes + replaces + inserts)
     return s
+
 
 def double_variants(word):
     """get variants for the variants for a word"""
     return set(s for w in variants(word) for s in variants(w))
+
 
 def reductions(word):
     """return flat option list of all possible variations of the word by removing duplicate letters"""
@@ -84,16 +96,18 @@ def reductions(word):
         # if letter appears more than once in a row
         if n:
             # generate a flat list of options ('hhh' becomes ['h','hh','hhh'])
-            flat_dupes = [ l*(r+1) for r in xrange(n+1) ][:3] # only take up to 3, there are no 4 letter repetitions in english
+            # only take up to 3, there are no 4 letter repetitions in english
+            flat_dupes = [l * (r + 1) for r in xrange(n + 1)][:3]
             # remove duplicate letters in original word
             for _ in range(n):
-                word.pop(idx+1)
+                word.pop(idx + 1)
             # replace original letter with flat list
             word[idx] = flat_dupes
-    
+
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
     for p in product(*word):
         yield ''.join(p)
+
 
 def vowelswaps(word):
     """return flat option list of all possible variations of the word by swapping vowels"""
@@ -106,17 +120,19 @@ def vowelswaps(word):
         elif l in vowels:
             # if l is a vowel, replace with all possible vowels
             word[idx] = list(vowels)
-    
+
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
     for p in product(*word):
         yield ''.join(p)
+
 
 def both(word):
     for reduction in reductions(word):
         for variant in vowelswaps(reduction):
             yield variant
 
-### POSSIBILITY CHOOSING
+# POSSIBILITY CHOOSING
+
 
 def suggestions(word, real_words, short_circuit=True):
     """get best spelling suggestion for word
@@ -124,17 +140,23 @@ def suggestions(word, real_words, short_circuit=True):
     """
     word = word.lower()
     if short_circuit:
-        return (        {word}                      & real_words or   #  caps     "inSIDE" => "inside"
-                        set(reductions(word))       & real_words or   #  repeats  "jjoobbb" => "job"
-                        set(vowelswaps(word))       & real_words or   #  vowels   "weke" => "wake"
-                        set(variants(word))         & real_words or   #  other    "nonster" => "monster"
-                        set(both(word))             & real_words or   #  both     "CUNsperrICY" => "conspiracy"
-                        set(double_variants(word))  & real_words or   #  other    "nmnster" => "manster"
-                        {"NO SUGGESTION"})
+        return ({word} & real_words or  # caps     "inSIDE" => "inside"
+                #  repeats  "jjoobbb" => "job"
+                set(reductions(word)) & real_words or
+                #  vowels   "weke" => "wake"
+                set(vowelswaps(word)) & real_words or
+                #  other    "nonster" => "monster"
+                set(variants(word)) & real_words or
+                #  both     "CUNsperrICY" => "conspiracy"
+                set(both(word)) & real_words or
+                #  other    "nmnster" => "manster"
+                set(double_variants(word)) & real_words or
+                {"NO SUGGESTION"})
     else:
-        return (        {word}                      & real_words or                                                          
-                        (set(reductions(word))  | set(vowelswaps(word)) | set(variants(word)) | set(both(word)) | set(double_variants(word))) & real_words or
-                        {"NO SUGGESTION"})
+        return ({word} & real_words or
+               (set(reductions(word)) | set(vowelswaps(word)) | set(variants(word)) | set(both(word)) | set(double_variants(word))) & real_words or
+                {"NO SUGGESTION"})
+
 
 def best(inputted_word, suggestions, word_model=None):
     """choose the best suggestion in a list based on lowest hamming distance from original word, or based on frequency if word_model is provided"""
@@ -154,9 +176,10 @@ def best(inputted_word, suggestions, word_model=None):
         return cmp(score2, score1)
 
     freq_sorted = sorted(suggestions, comparefreq)[10:]     # take the top 10
-    hamming_sorted = sorted(suggestions, comparehamm)[10:]     # take the top 10
-    print "FREQ",freq_sorted
-    print "HAM",hamming_sorted
+    # take the top 10
+    hamming_sorted = sorted(suggestions, comparehamm)[10:]
+    print "FREQ", freq_sorted
+    print "HAM", hamming_sorted
     return ""
 
 if __name__ == "__main__":
@@ -165,27 +188,29 @@ if __name__ == "__main__":
 
     real_words = set(word_model)
 
-    texts = [ 'sherlockholmes.txt',
-             # feel free to add other texts here, they are used to train the frequency model
+    texts = ['sherlockholmes.txt',
+             # feel free to add other texts here, they are used to train the
+             # frequency model
              ]
 
     word_model = train_from_files(texts, word_model)
-    
+
     log("Total Word Set: ", len(word_model))
-    log("Model Precision: %s" % (float(sum(word_model.values()))/len(word_model)))
+    log("Model Precision: %s" %
+        (float(sum(word_model.values())) / len(word_model)))
 
     try:
         while True:
             word = str(raw_input(">"))
 
             possibilities = suggestions(word, real_words, short_circuit=False)
-            short_circuit_result = suggestions(word, real_words, short_circuit=True)
-            print [ (x, word_model[x]) for x in possibilities]
+            short_circuit_result = suggestions(
+                word, real_words, short_circuit=True)
+            print[(x, word_model[x]) for x in possibilities]
             print best(word, possibilities, word_model)
             print "---"
-            print [ (x, word_model[x]) for x in short_circuit_result]
+            print[(x, word_model[x]) for x in short_circuit_result]
             print best(word, short_circuit_result, word_model)
-
 
     except (EOFError, KeyboardInterrupt):
         exit(0)
