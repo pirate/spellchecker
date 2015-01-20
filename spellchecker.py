@@ -24,13 +24,12 @@ def words(text):
 
 def train(text, model=None):
     """generate or update a word model (dictionary of word:frequency)"""
-    if model is None:
-        model = collections.defaultdict(lambda: 0)
+    model = collections.defaultdict(lambda: 0) if model is None else model
     for word in words(text):
         model[word] += 1
     return model
 
-def train_from_files(file_list, model=None):
+def train_from_files(file_list, g=None):
     for f in file_list:
         model = train(file(f).read(), model)
     return model
@@ -40,11 +39,11 @@ def train_from_files(file_list, model=None):
 def numberofdupes(string, idx):
     """return the number of times in a row the letter at index idx is duplicated"""
     # "abccdefgh", 2  returns 1
-    initial_idx = idx # 2
-    last = string[idx] # c
+    initial_idx = idx
+    last = string[idx]
     while idx+1 < len(string) and string[idx+1] == last:
-        idx += 1 # 3
-    return idx-initial_idx # 3-2 = 1
+        idx += 1 
+    return idx-initial_idx
 
 def hamming_distance(word1, word2):
     if word1 == word2:
@@ -54,10 +53,7 @@ def hamming_distance(word1, word2):
     return dist
 
 def frequency(word, word_model):
-    if word in word_model:
-        return word_model.get(word)
-    else:
-        return 0
+    return word_model.get(word, 0)
 
 ### POSSIBILITIES ANALYSIS
 
