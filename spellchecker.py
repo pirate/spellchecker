@@ -6,14 +6,13 @@ import collections
 from itertools import product, imap
 
 VERBOSE = True
-vowels = set("aeiouy")
+vowels = set('aeiouy')
 alphabet = set('abcdefghijklmnopqrstuvwxyz')
 
 ### IO
 
 def log(*args):
-    if VERBOSE:
-        print ''.join([ str(x) for x in args])
+    if VERBOSE: print ''.join([ str(x) for x in args])
 
 def words(text):
     """filter body of text for words"""
@@ -93,17 +92,16 @@ def vowelswaps(word):
     # ['h','i'] becomes ['h', ['a', 'e', 'i', 'o', 'u', 'y']]
     for idx, l in enumerate(word):
         if type(l) == list:
-            # dont mess with the reductions
-            pass
+            pass                        # dont mess with the reductions
         elif l in vowels:
-            # if l is a vowel, replace with all possible vowels
-            word[idx] = list(vowels)
+            word[idx] = list(vowels)    # if l is a vowel, replace with all possible vowels
     
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
     for p in product(*word):
         yield ''.join(p)
 
 def both(word):
+    """permute all combinations of reductions and vowelswaps"""
     for reduction in reductions(word):
         for variant in vowelswaps(reduction):
             yield variant
@@ -112,10 +110,9 @@ def both(word):
 
 def suggestions(word, real_words, short_circuit=True):
     """get best spelling suggestion for word
-    return on first match if short_circuit is true, otherwise collect all possible suggestions
-    """
+    return on first match if short_circuit is true, otherwise collect all possible suggestions"""
     word = word.lower()
-    if short_circuit:
+    if short_circuit:   # setting short_circuit makes the spellchecker much faster, but less accurate in some cases
         return ({word}                      & real_words or   #  caps     "inSIDE" => "inside"
                 set(reductions(word))       & real_words or   #  repeats  "jjoobbb" => "job"
                 set(vowelswaps(word))       & real_words or   #  vowels   "weke" => "wake"
@@ -136,50 +133,47 @@ def best(inputted_word, suggestions, word_model=None):
     def comparehamm(one, two):
         score1 = hamming_distance(inputted_word, one)
         score2 = hamming_distance(inputted_word, two)
-        # lower is better
-        return cmp(score1, score2)
+        return cmp(score1, score2)  # lower is better
 
     def comparefreq(one, two):
         score1 = frequency(one, word_model)
         score2 = frequency(two, word_model)
-        # higher is better
-        return cmp(score2, score1)
+        return cmp(score2, score1)  # higher is better
 
     freq_sorted = sorted(suggestions, cmp=comparefreq)[10:]     # take the top 10
     hamming_sorted = sorted(suggestions, cmp=comparehamm)[10:]  # take the top 10
-    print "FREQ", freq_sorted
-    print "HAM", hamming_sorted
-    return ""
+    print 'FREQ', freq_sorted
+    print 'HAM', hamming_sorted
+    return ''
 
-if __name__ == "__main__":
-
+if __name__ == '__main__':
+    # init the word frequency model with a simple list of all possible words
     word_model = train(file('/usr/share/dict/words').read())
-
     real_words = set(word_model)
-
-    texts = ['sherlockholmes.txt',
-             'lemmas.txt',
-             '',
-             # feel free to add other texts here, they are used to train the frequency model
-             ]
-
-    word_model = train_from_files(texts, word_model)
+    # add other texts here, they are used to train the word frequency model
+    texts = [
+        'sherlockholmes.txt',
+        'lemmas.txt',
+    ]
+    # enhance the model with real bodies of english so we know which words are more common than others
+    word_model = train_from_files(texts, word_model)     
     
-    log("Total Word Set: ", len(word_model))
-    log("Model Precision: %s" % (float(sum(word_model.values()))/len(word_model)))
-
+    log('Total Word Set: ', len(word_model))
+    log('Model Precision: %s' % (float(sum(word_model.values()))/len(word_model)))
     try:
         while True:
-            word = str(raw_input(">"))
+            word = str(raw_input('>'))
 
             possibilities = suggestions(word, real_words, short_circuit=False)
             short_circuit_result = suggestions(word, real_words, short_circuit=True)
-            #print [(x, word_model[x]) for x in possibilities]
-            #print best(word, possibilities, word_model)
-            #print "---"
+            if VERBOSE:
+                print [(x, word_model[x]) for x in possibilities]
+                print best(word, possibilities, word_model)
+                print '---'
             print [(x, word_model[x]) for x in short_circuit_result]
-            #print best(word, short_circuit_result, word_model)
-
+            if VERBOSE:
+                print best(word, short_circuit_result, word_model)
 
     except (EOFError, KeyboardInterrupt):
         exit(0)
+        
