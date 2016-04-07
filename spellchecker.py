@@ -81,7 +81,7 @@ def reductions(word):
                 word.pop(idx+1)
             # replace original letter with flat list
             word[idx] = flat_dupes
-    
+
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
     for p in product(*word):
         yield ''.join(p)
@@ -95,7 +95,7 @@ def vowelswaps(word):
             pass                        # dont mess with the reductions
         elif l in vowels:
             word[idx] = list(vowels)    # if l is a vowel, replace with all possible vowels
-    
+
     # ['h',['i','ii','iii']] becomes 'hi','hii','hiii'
     for p in product(*word):
         yield ''.join(p)
@@ -121,7 +121,7 @@ def suggestions(word, real_words, short_circuit=True):
                 set(double_variants(word))  & real_words or   #  other    "nmnster" => "manster"
                 {"NO SUGGESTION"})
     else:
-        return ({word}                      & real_words or                                                          
+        return ({word}                      & real_words or
                 (set(reductions(word))  | set(vowelswaps(word)) | set(variants(word)) | set(both(word)) | set(double_variants(word))) & real_words or
                 {"NO SUGGESTION"})
 
@@ -150,14 +150,15 @@ if __name__ == '__main__':
     # init the word frequency model with a simple list of all possible words
     word_model = train(file('/usr/share/dict/words').read())
     real_words = set(word_model)
+
     # add other texts here, they are used to train the word frequency model
     texts = [
         'sherlockholmes.txt',
         'lemmas.txt',
     ]
     # enhance the model with real bodies of english so we know which words are more common than others
-    word_model = train_from_files(texts, word_model)     
-    
+    word_model = train_from_files(texts, word_model)
+
     log('Total Word Set: ', len(word_model))
     log('Model Precision: %s' % (float(sum(word_model.values()))/len(word_model)))
     try:
@@ -176,4 +177,3 @@ if __name__ == '__main__':
 
     except (EOFError, KeyboardInterrupt):
         exit(0)
-        
