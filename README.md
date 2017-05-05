@@ -1,6 +1,6 @@
 # Simple Python Spell-Checker
 
-##Quickstart
+## Quickstart
 
 ```bash
 git clone https://github.com/pirate/spellchecker
