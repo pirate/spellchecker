@@ -18,7 +18,7 @@ python misspeller.py | python spellchecker.py
 ```
 You can edit `spellchecker.py` and add more files to the training list to increase the word-frequency model precision.
 
-##Background
+## Background
 
 
 Peter Norvig wrote an amazing article titled [How to Write a Spelling Corrector](http://norvig.com/spell-correct.html) detailing a basic approach to this deceivingly simple problem.
