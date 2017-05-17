@@ -24,7 +24,7 @@ You can edit `spellchecker.py` and add more files to the training list to increa
 Peter Norvig wrote an amazing article titled [How to Write a Spelling Corrector](http://norvig.com/spell-correct.html) detailing a basic approach to this deceivingly simple problem.
 I had to write a spellchecker as an interview question for [Disqus](https://disqus.com/), and this repo details my efforts.
 
-The core code that I borrow from Norvig is this beautiful block:
+The core code that I borrow from [Darius Bacon](https://github.com/darius) & Norvig is this beautiful block:
 ```python
 def variants(word):
     """get all possible variants for a word"""
