@@ -44,3 +44,7 @@ My additions are:
   - double word variants for catching more complex multi-typos
   - vowel-swapping detection
   - a reductions function to efficiently store word variants like `monster: ['m',['o', 'a'], 'n', 's', 't', 'e', 'r']`
+
+## Faster Algorithm
+
+A faster spellchecking algorithm exists, see: https://github.com/wolfgarbe/SymSpell
