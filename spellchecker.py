@@ -1,3 +1,4 @@
+#!/usr/bin/env python2
 # Nick Sweeting 2014
 # python spellchecker
 
@@ -6,13 +7,15 @@ import collections
 from itertools import product, imap
 
 VERBOSE = True
+SYSTEM_DICTIONARY = '/usr/share/dict/words'
 vowels = set('aeiouy')
 alphabet = set('abcdefghijklmnopqrstuvwxyz')
+
 
 ### IO
 
 def log(*args):
-    if VERBOSE: print ''.join([ str(x) for x in args])
+    if VERBOSE: print ''.join([str(x) for x in args])
 
 def words(text):
     """filter body of text for words"""
@@ -148,7 +151,7 @@ def best(inputted_word, suggestions, word_model=None):
 
 if __name__ == '__main__':
     # init the word frequency model with a simple list of all possible words
-    word_model = train(file('/usr/share/dict/words').read())
+    word_model = train(file(SYSTEM_DICTIONARY).read())
     real_words = set(word_model)
 
     # add other texts here, they are used to train the word frequency model
